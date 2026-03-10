@@ -1,5 +1,5 @@
 import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
-import { GetActiveMissionUseCase } from '@/domain/missions/usecase/get-active/get-active-mission.usecase';
+import { GetActiveMissionUseCase } from '@/modules/missions/usecase/get-active/get-active-mission.usecase';
 
 @Controller('missions')
 export class MissionsController {
