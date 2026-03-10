@@ -1,20 +1,36 @@
-import { Injectable } from '@nestjs/common';
-import { Mission, TargetActor } from '../../domain/mission.entity';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '@/infra/database/prisma.service';
 
 @Injectable()
 export class GetActiveMissionUseCase {
-  public execute(): Mission {
-    const target = new TargetActor(
-      '/Game/_Game/Characters/Player/Blueprints/BP_SACharacter.BP_SACharacter_C', // Mude para o seu!
-      { x: 500.0, y: 500.0, z: 100.0 },
-    );
+  constructor(private readonly prisma: PrismaService) {}
 
-    const mission = new Mission('tutorial_01', target);
+  public async execute(missionId: string) {
+    const mission = await this.prisma.mission.findUnique({
+      where: { id: missionId },
+      include: { versions: true },
+    });
 
-    if (!mission.isValid()) {
-      throw new Error('Missão corrompida: Blueprint sem sufixo _C');
+    if (!mission) {
+      throw new NotFoundException(`Jacaré não achou a missão: ${missionId}`);
     }
 
-    return mission;
+    if (!mission.activeHash) {
+      throw new NotFoundException(
+        `A missão ${missionId} existe, mas não tem versão publicada.`,
+      );
+    }
+
+    const activeVersion = mission.versions.find(
+      (v) => v.hash === mission.activeHash,
+    );
+
+    if (!activeVersion) {
+      throw new Error(
+        'Estado corrompido: O Hash ativo não aponta para nenhuma versão!',
+      );
+    }
+
+    return activeVersion.missionData;
   }
 }

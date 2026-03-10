@@ -1,30 +1,13 @@
-import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
 import { GetActiveMissionUseCase } from '@/modules/missions/usecase/get-active/get-active-mission.usecase';
+import { Controller, Get, Param } from '@nestjs/common';
 
 @Controller('missions')
 export class MissionsController {
-  constructor(
-    private readonly getActiveMissionUseCase: GetActiveMissionUseCase,
-  ) {}
+  constructor(private readonly getActiveMission: GetActiveMissionUseCase) {}
 
-  @Get('active')
-  async getActiveMission() {
-    try {
-      const mission = await this.getActiveMissionUseCase.execute();
-
-      return {
-        mission_id: mission.id,
-        target_actor: {
-          class_path: mission.targetActor.classPath,
-          spawn_location: {
-            X: mission.targetActor.spawnLocation.x,
-            Y: mission.targetActor.spawnLocation.y,
-            Z: mission.targetActor.spawnLocation.z,
-          },
-        },
-      };
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+  // Rota: GET http://localhost:3000/missions/tutorial_01/active
+  @Get(':id/active')
+  async getActive(@Param('id') id: string) {
+    return this.getActiveMission.execute(id);
   }
 }
