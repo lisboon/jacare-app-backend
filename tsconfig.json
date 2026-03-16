@@ -18,12 +18,10 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true,
+    "types": ["node", "jest"], 
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "watchOptions": {
-    "watchFile": "fixedPollingInterval"
-  },
-  "exclude": ["metadata.ts"]
+  "exclude": ["node_modules", "dist", "metadata.ts"]
 }

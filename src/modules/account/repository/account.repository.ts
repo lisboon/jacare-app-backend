@@ -2,10 +2,10 @@ import type { User as PrismaUserRow, PrismaClient } from '@prisma/client';
 import { User, UserProps } from '../domain/user.entity';
 import {
   AccountGateway,
-  CreateOrganizationData,
-  CreateMemberData,
   MemberRecord,
   MemberWithUser,
+  SignupAtomicInput,
+  SignupAtomicResult,
 } from '../gateway/account.gateway';
 
 export class AccountRepository implements AccountGateway {
@@ -33,44 +33,55 @@ export class AccountRepository implements AccountGateway {
     return this.toDomainEntity(prismaRow);
   }
 
-  async createUser(user: User): Promise<void> {
-    await this.prisma.user.create({
-      data: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        password: user.password,
-        avatarUrl: user.avatarUrl,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
-    });
-  }
+  /**
+   * Cria User, Organization e Member em uma única transação atômica.
+   * Se qualquer operação falhar, o Postgres reverte tudo — zero registros órfãos.
+   *
+   * Vaughn Vernon ("Implementing DDD"): a fronteira de consistência de um Aggregate
+   * deve ser garantida pela camada de infraestrutura, não pelo código de domínio.
+   * prisma.$transaction() é o adaptador dessa garantia.
+   */
+  async createSignupAtomically(
+    input: SignupAtomicInput,
+  ): Promise<SignupAtomicResult> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.user.create({
+        data: {
+          id: input.user.id,
+          email: input.user.email,
+          name: input.user.name,
+          password: input.user.password,
+          avatarUrl: input.user.avatarUrl,
+          createdAt: input.user.createdAt,
+          updatedAt: input.user.updatedAt,
+        },
+      });
 
-  async createOrganization(data: CreateOrganizationData): Promise<string> {
-    const org = await this.prisma.organization.create({
-      data: {
-        name: data.name,
-        slug: data.slug,
-      },
-    });
-    return org.id;
-  }
+      const org = await tx.organization.create({
+        data: {
+          name: input.organization.name,
+          slug: input.organization.slug,
+        },
+      });
 
-  async createMember(data: CreateMemberData): Promise<MemberRecord> {
-    const member = await this.prisma.member.create({
-      data: {
-        userId: data.userId,
-        organizationId: data.organizationId,
-        role: data.role,
-      },
+      const member = await tx.member.create({
+        data: {
+          userId: input.user.id,
+          organizationId: org.id,
+          role: input.memberRole,
+        },
+      });
+
+      return {
+        organizationId: org.id,
+        member: {
+          id: member.id,
+          userId: member.userId,
+          organizationId: member.organizationId,
+          role: member.role,
+        },
+      };
     });
-    return {
-      id: member.id,
-      userId: member.userId,
-      organizationId: member.organizationId,
-      role: member.role,
-    };
   }
 
   async findMemberWithUser(memberId: string): Promise<MemberWithUser | null> {

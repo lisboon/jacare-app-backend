@@ -5,8 +5,7 @@
     "test",
     "dist",
     "**/*spec.ts",
-    "seedsValues.ts",
-    "prisma",
+    "prisma/seed.ts",
     "src/metadata.ts"
   ]
 }

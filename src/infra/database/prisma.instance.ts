@@ -4,7 +4,10 @@ import { PrismaPg } from '@prisma/adapter-pg';
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({
   adapter,
-  log: ['query', 'info', 'warn'],
+  log:
+    process.env.NODE_ENV === 'production'
+      ? ['error']
+      : ['query', 'info', 'warn'],
 });
 
 export default prisma;

@@ -35,20 +35,16 @@ export class SignupUseCase implements SignupUseCaseInterface {
       password: hashedPassword,
     });
 
-    await this.accountRepository.createUser(user);
-
     const slug = this.generateSlug(input.organizationName);
 
-    const organizationId = await this.accountRepository.createOrganization({
-      name: input.organizationName,
-      slug,
-    });
-
-    const member = await this.accountRepository.createMember({
-      userId: user.id,
-      organizationId,
-      role: 'ADMIN',
-    });
+    // Criação atômica: User + Organization + Member em uma única transação.
+    // Se a rede cair entre as escritas, o Postgres reverte tudo — zero dados corrompidos.
+    const { organizationId, member } =
+      await this.accountRepository.createSignupAtomically({
+        user,
+        organization: { name: input.organizationName, slug },
+        memberRole: 'ADMIN',
+      });
 
     const token = this.signToken({
       memberId: member.id,
