@@ -37,8 +37,6 @@ export class SignupUseCase implements SignupUseCaseInterface {
 
     const slug = this.generateSlug(input.organizationName);
 
-    // Criação atômica: User + Organization + Member em uma única transação.
-    // Se a rede cair entre as escritas, o Postgres reverte tudo — zero dados corrompidos.
     const { organizationId, member } =
       await this.accountRepository.createSignupAtomically({
         user,
